@@ -1,42 +1,57 @@
-Index.html
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>My Diet & Recipe Manager</title>
+  <title>My Diet & Meal Prep Manager</title>
   <style>
     :root { --primary: #2e7d32; --bg: #f4f6f8; --card: #ffffff; }
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); margin: 0; padding: 16px; }
-    .container { max-width: 600px; margin: 0 auto; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); margin: 0; padding: 16px; color: #333; }
+    .container { max-width: 650px; margin: 0 auto; }
     h1, h3 { color: var(--primary); margin-top: 0; }
     .card { background: var(--card); padding: 16px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); margin-bottom: 16px; }
     .row { display: flex; gap: 8px; }
     .row > * { flex: 1; }
     input, textarea, select, button { width: 100%; margin-top: 8px; padding: 10px; border-radius: 8px; border: 1px solid #ccc; box-sizing: border-box; font-size: 14px; }
-    button { background: var(--primary); color: white; border: none; font-weight: bold; cursor: pointer; transition: 0.2s; }
-    button:active { opacity: 0.8; }
+    button { background: var(--primary); color: white; border: none; font-weight: bold; cursor: pointer; border-radius: 8px; }
     button.secondary { background: #455a64; margin-top: 6px; }
     button.danger { background: #c62828; width: auto; padding: 6px 12px; font-size: 12px; }
-    .recipe-item { border-left: 4px solid var(--primary); padding-left: 12px; margin-bottom: 16px; background: #fafafa; padding: 10px; border-radius: 4px; }
+    .recipe-item { border-left: 4px solid var(--primary); padding: 12px; margin-bottom: 16px; background: #fafafa; border-radius: 4px; }
     .tag { display: inline-block; background: #e8f5e9; color: var(--primary); padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; }
-    .macro-badge { display: inline-block; background: #e3f2fd; color: #1565c0; padding: 2px 6px; border-radius: 4px; font-size: 11px; margin-right: 4px; }
+    .macro-badge { display: inline-block; background: #e3f2fd; color: #1565c0; padding: 3px 6px; border-radius: 4px; font-size: 11px; margin-right: 4px; font-weight: bold; }
+    .prep-box { background: #fffde7; border: 1px solid #fff59d; padding: 12px; border-radius: 8px; margin-top: 10px; }
   </style>
 </head>
 <body>
   <div class="container">
-    <h1 style="text-align: center;">My Personal Diet & Recipes</h1>
+    <h1 style="text-align: center;">My Diet & Daily Meal Prep</h1>
 
-    <!-- Add Custom Food Form -->
+    <!-- SECTION 1: Whole Day Meal Prep Planner -->
     <div class="card">
-      <h3>Add / Customize Food Item</h3>
+      <h3>🍱 Build Whole-Day Meal Prep</h3>
+      <p style="font-size: 13px; color: #666;">Select your items for today to check total daily calories, protein, and prep instructions:</p>
+      
+      <label><b>1. Select Breakfast:</b></label>
+      <select id="prepBreakfast" onchange="calculatePrep()"></select>
+      
+      <label style="margin-top: 10px; display:block;"><b>2. Select Lunch & Dinner Curry/Main:</b></label>
+      <select id="prepCurry" onchange="calculatePrep()"></select>
+
+      <div class="prep-box" id="prepSummary">
+        <!-- Daily Macro Totals & Guidelines appear here -->
+      </div>
+    </div>
+
+    <!-- SECTION 2: Add Custom Food / Recipe -->
+    <div class="card">
+      <h3>➕ Add / Customize Food Item</h3>
       <input type="text" id="foodName" placeholder="Food Name (e.g., Thotakura Pappu)">
       
       <div class="row">
         <select id="mealType">
           <option value="Breakfast">Breakfast</option>
           <option value="Lunch & Dinner">Lunch & Dinner</option>
-          <option value="Post-Workout">Post-Workout</option>
+          <option value="Post-Workout Anchor">Post-Workout Anchor</option>
           <option value="Daily Booster">Daily Booster</option>
         </select>
         <input type="number" id="calories" placeholder="Calories (kcal)">
@@ -48,68 +63,241 @@ Index.html
         <input type="number" id="fats" placeholder="Fats (g)">
       </div>
 
-      <textarea id="recipeText" rows="4" placeholder="Recipe steps, portion guidelines (e.g., Pair with 600g cooked rice)..."></textarea>
-      <button onclick="addRecipe()">Save Food Item</button>
+      <textarea id="recipeText" rows="5" placeholder="Detailed Ingredients & Step-by-Step cooking instructions..."></textarea>
+      <button onclick="addRecipe()">Save Recipe Item</button>
     </div>
 
-    <!-- Data Management -->
+    <!-- SECTION 3: Data Export / Import -->
     <div class="card">
-      <button class="secondary" onclick="exportData()">Export Data (JSON Download)</button>
+      <button class="secondary" onclick="exportData()">Download Backup (JSON)</button>
       <input type="file" id="importFile" accept=".json" style="display:none;" onchange="importData(event)">
       <button class="secondary" onclick="document.getElementById('importFile').click()">Import Master Data (JSON)</button>
     </div>
 
-    <!-- Food List -->
+    <!-- SECTION 4: Saved Detailed Recipes -->
     <div class="card">
-      <h3>Saved Food Items & Recipes</h3>
+      <h3>📖 Detailed Recipes & Instructions</h3>
       <div id="recipeList"></div>
     </div>
   </div>
 
   <script>
-    // Master Default Dataset configured for 600g Rice (350g Lunch / 250g Dinner)
     const defaultData = [
-      {
-        name: "Daily Rice Portions (600g Total)",
-        meal: "Lunch & Dinner Base",
-        calories: 780, protein: 14, carbs: 168, fats: 1,
-        recipe: "Lunch: 350g cooked white rice (~455 kcal).\nDinner: 250g cooked white rice (~325 kcal).\nServes as the carb base for all daily curries, pulusu, and pappu."
-      },
       {
         name: "Breakfast Option 1: Oats & Seed Bowl + 2 Eggs",
         meal: "Breakfast",
         calories: 780, protein: 37, carbs: 75, fats: 28,
-        recipe: "50g oats cooked with 200ml milk or curd + 1 banana + 1 tbsp each of chia, flax, pumpkin, and sunflower seeds. Served with 2 whole eggs on the side."
+        recipe: "INGREDIENTS:\n- 50g Rolled Oats\n- 200ml Whole Milk or 200g Fresh Curd\n- 1 Banana (Sliced)\n- 1 tbsp each of Chia, Flax, Pumpkin, & Sunflower seeds\n- 2 Whole Eggs\n\nHOW TO PREPARE:\n1. Mix oats with milk or curd in a bowl. Let sit for 5 minutes.\n2. Top with sliced banana and the 4-seed mix.\n3. Boil or scramble 2 whole eggs and serve on the side."
       },
       {
         name: "Breakfast Option 2: 4 Mini Dosa + Chutney + 2 Eggs + 2 Bananas",
         meal: "Breakfast",
         calories: 780, protein: 26, carbs: 105, fats: 22,
-        recipe: "4 homemade mini dosas served with fresh peanut chutney, 2 whole eggs, and 2 bananas."
-      },
-      {
-        name: "Night Air-Fried Chicken (For Veg / Pappu / Pulusu Days)",
-        meal: "Post-Workout",
-        calories: 420, protein: 62, carbs: 2, fats: 14,
-        recipe: "250g boneless chicken marinated in ginger-garlic, chili powder, turmeric, coriander, home garam masala, lemon, and 1 tsp oil. Air-fry at 190°C for 15 mins. Eaten post-workout with 250g dinner rice."
-      },
-      {
-        name: "Hyderabadi Chicken Biryani Day (500g Chicken Total)",
-        meal: "Lunch & Dinner",
-        calories: 1750, protein: 140, carbs: 140, fats: 45,
-        recipe: "500g chicken marinated in curd, mint, and spices layered with Basmati rice. Split between Lunch (250g) and Dinner (250g). NO extra air-fried chicken needed on this day!"
-      },
-      {
-        name: "Punjabi Butter Chicken Day (500g Chicken Total)",
-        meal: "Lunch & Dinner",
-        calories: 1650, protein: 135, carbs: 130, fats: 50,
-        recipe: "500g boneless chicken in a tomato, butter, and cream/milk sauce. Split between Lunch and Dinner. NO extra air-fried chicken needed on this day!"
+        recipe: "INGREDIENTS:\n- Dosa Batter for 4 mini dosas\n- 3-4 tbsp Fresh Peanut Chutney\n- 2 Whole Eggs\n- 2 Bananas\n\nHOW TO PREPARE:\n1. Prepare 4 mini dosas on a tawa.\n2. Serve with homemade peanut chutney, 2 boiled or fried eggs, and eat 2 bananas."
       },
       {
         name: "Leafy Greens Pappu (Gongura / Thotakura / Palakura)",
         meal: "Lunch & Dinner",
         calories: 320, protein: 18, carbs: 48, fats: 4,
-        recipe: "Toor dal pressure cooked with fresh greens, onions, tomatoes, and chilies. Mashed smooth (No Popu). Scaled to pair with 600g cooked white rice across Lunch (350g) and Dinner (250g)."
+        recipe: "INGREDIENTS:\n- 1 cup Toor Dal\n- 2 bunches fresh Gongura, Thotakura, or Palakura (chopped)\n- 1 Onion, 2 Tomatoes, 3 Green Chilies\n- Turmeric, Chili Powder, Salt, Water\n\nHOW TO PREPARE (No Popu):\n1. In a pressure cooker, add Toor dal, chopped greens, onion, tomatoes, green chilies, turmeric, chili powder, and water.\n2. Pressure cook for 4-5 whistles.\n3. Add salt and mash smoothly with a wooden dal ganti.\n4. Meal Prep Portion: Pair with 350g rice for Lunch and 250g rice for Dinner."
+      },
+      {
+        name: "Simple Tamarind Pulusu (Bendakaya / Egg / Chamadumpala / Munagakaya)",
+        meal: "Lunch & Dinner",
+        calories: 260, protein: 16, carbs: 32, fats: 7,
+        recipe: "INGREDIENTS:\n- Veggies (Bendakaya / Chamadumpala / Munagakaya) OR 3 Boiled Eggs\n- 1 Onion (sliced), 2 Green Chilies\n- Tamarind extract (lemon sized ball soaked in water)\n- Turmeric, Red Chili Powder, Salt, Water\n\nHOW TO PREPARE (No Popu):\n1. Add sliced veggies/boiled eggs, onions, green chilies, tamarind extract, turmeric, chili powder, salt, and water in a pot.\n2. Bring to a boil and simmer uncovered for 12-15 minutes until gravy thickens.\n3. Meal Prep Portion: Pair with 350g rice for Lunch and 250g rice post-workout at Dinner."
+      },
+      {
+        name: "Simple Tomato Veg Curry (Cauliflower / Chikudikaya)",
+        meal: "Lunch & Dinner",
+        calories: 180, protein: 6, carbs: 24, fats: 6,
+        recipe: "INGREDIENTS:\n- Chopped Cauliflower florets or Chikudikaya\n- 1 Onion, 2 Tomatoes (chopped), 2 Green Chilies\n- Turmeric, Red Chili Powder, Salt, 1 tbsp Oil\n\nHOW TO PREPARE (No Popu):\n1. Sauté onions and chilies in oil for 2 mins.\n2. Add tomatoes, salt, and turmeric; cover till soft.\n3. Add veggies, chili powder, and half cup water. Cover and cook till tender."
+      },
+      {
+        name: "Night Air-Fried Chicken (For Veg / Pappu / Pulusu Days)",
+        meal: "Post-Workout Anchor",
+        calories: 420, protein: 62, carbs: 2, fats: 14,
+        recipe: "INGREDIENTS (250g Boneless):\n- 250g Boneless Chicken\n- 1 tsp Ginger-Garlic paste, 1 tsp Red Chili powder, ¼ tsp Turmeric, ½ tsp Coriander powder, ¼ tsp Garam Masala, 1 tsp Lemon juice, 1 tsp Oil, Salt.\n\nHOW TO PREPARE:\n1. Marinate chicken with all spices, lemon juice, and oil for 15 mins.\n2. Pre-heat Air Fryer to 190°C.\n3. Air fry for 14-16 minutes (shake basket halfway). Serve hot post-workout with 250g dinner rice."
+      },
+      {
+        name: "Hyderabadi Chicken Biryani Day (500g Chicken Total)",
+        meal: "Lunch & Dinner",
+        calories: 1750, protein: 140, carbs: 140, fats: 45,
+        recipe: "INGREDIENTS:\n- 500g Chicken\n- 4 tbsp Curd, 1.5 tbsp Ginger-Garlic paste, Mint, Coriander leaves, Biryani spices, Salt\n- Basmati Rice\n\nHOW TO PREPARE:\n1. Marinate 500g chicken in curd, ginger-garlic paste, and spices.\n2. Layer with 70% cooked Basmati rice and slow cook (Dum) for 20 mins.\n3. Meal Prep Split: Pack 250g chicken + 350g rice for Lunch. Pack 250g chicken + 250g rice for Dinner. (No extra night air-fried chicken needed!)."
+      },
+      {
+        name: "Punjabi Butter Chicken Day (500g Chicken Total)",
+        meal: "Lunch & Dinner",
+        calories: 1650, protein: 135, carbs: 130, fats: 50,
+        recipe: "INGREDIENTS:\n- 500g Boneless Chicken\n- Curd, Ginger-Garlic, Tomatoes, 2 tbsp Butter, Cream/Milk, Kasuri Methi\n\nHOW TO PREPARE:\n1. Air-fry marinated chicken pieces at 200°C for 14 mins.\n2. Make gravy by cooking onions, ginger-garlic, and tomatoes. Blend smooth, simmer with butter and chili powder.\n3. Add chicken, finish with cream and kasuri methi. Split into Lunch & Dinner portions."
+      },
+      {
+        name: "Daily Rice Portions (600g Total)",
+        meal: "Lunch & Dinner Base",
+        calories: 780, protein: 14, carbs: 168, fats: 1,
+        recipe: "DAILY PREP:\nCook 600g total cooked white rice in your rice cooker every morning.\n- Lunch Portion: 350g cooked rice (~455 kcal)\n- Dinner Portion: 250g cooked rice (~325 kcal post-workout)"
+      },
+      {
+        name: "Daily Vitamin C & Health Boosters",
+        meal: "Daily Booster",
+        calories: 30, protein: 1, carbs: 7, fats: 0,
+        recipe: "DAILY ROUTINE:\n- Eat 1 raw Amla daily alongside Lunch (maximizes iron absorption from greens and pappu).\n- Drink 3.5 Liters of water throughout the day.\n- Get 15 minutes of morning sunlight."
+      }
+    ];
+
+    function getRecipes() {
+      const stored = localStorage.getItem('myDietRecipesFullV2');
+      if (!stored) {
+        localStorage.setItem('myDietRecipesFullV2', JSON.stringify(defaultData));
+        return defaultData;
+      }
+      return JSON.parse(stored);
+    }
+
+    function renderOptions() {
+      const recipes = getRecipes();
+      const bSelect = document.getElementById('prepBreakfast');
+      const cSelect = document.getElementById('prepCurry');
+
+      const breakfasts = recipes.filter(r => r.meal === 'Breakfast');
+      const curries = recipes.filter(r => r.meal === 'Lunch & Dinner' || r.meal === 'Post-Workout Anchor');
+
+      bSelect.innerHTML = breakfasts.map((r, i) => `<option value="${r.name}">${r.name}</option>`).join('');
+      cSelect.innerHTML = curries.map((r, i) => `<option value="${r.name}">${r.name}</option>`).join('');
+      
+      calculatePrep();
+    }
+
+    function calculatePrep() {
+      const recipes = getRecipes();
+      const bName = document.getElementById('prepBreakfast').value;
+      const cName = document.getElementById('prepCurry').value;
+
+      const bItem = recipes.find(r => r.name === bName) || { calories: 0, protein: 0 };
+      const cItem = recipes.find(r => r.name === cName) || { calories: 0, protein: 0 };
+      const riceItem = recipes.find(r => r.name.includes("Rice Portions")) || { calories: 780, protein: 14 };
+
+      const isFullChickenDay = cName.includes("500g") || cName.includes("Biryani") || cName.includes("Butter Chicken");
+      
+      let totalCal = Number(bItem.calories) + Number(cItem.calories) + Number(riceItem.calories);
+      let totalProt = Number(bItem.protein) + Number(cItem.protein) + Number(riceItem.protein);
+      
+      let nightChickenNote = "";
+      if (!isFullChickenDay) {
+        // Add 250g Air Fried Chicken automatically for non-chicken main days
+        const afChicken = recipes.find(r => r.name.includes("Air-Fried Chicken")) || { calories: 420, protein: 62 };
+        totalCal += Number(afChicken.calories);
+        totalProt += Number(afChicken.protein);
+        nightChickenNote = "<br><b>🍗 Post-Workout Dinner:</b> Air-fry 250g Spicy Chicken + 250g Cooked Rice.";
+      } else {
+        nightChickenNote = "<br><b>🍗 Post-Workout Dinner:</b> Eat 2nd portion (250g chicken) of your prepared Biryani/Butter Chicken + 250g Rice (No extra air-frying needed!).";
+      }
+
+      document.getElementById('prepSummary').innerHTML = `
+        <h4 style="margin:0 0 6px 0; color:#2e7d32;">Today's Whole-Day Target:</h4>
+        <span class="macro-badge" style="font-size:13px;">Total Cal: ~${totalCal} kcal</span>
+        <span class="macro-badge" style="font-size:13px; background:#e8f5e9; color:#2e7d32;">Total Protein: ~${totalProt}g</span>
+        <hr style="border:0; border-top:1px solid #ddd; margin:8px 0;">
+        <div style="font-size:12px; line-height:1.5;">
+          <b>☀️ Morning Prep:</b> Cook 600g Rice in rice cooker (350g Lunch / 250g Dinner). Eat selected breakfast.<br>
+          <b>🥗 Lunch:</b> 350g Rice + ${cName} + 1 Cup Curd + 1 Raw Amla.${nightChickenNote}
+        </div>
+      `;
+    }
+
+    function renderRecipes() {
+      const recipes = getRecipes();
+      const list = document.getElementById('recipeList');
+      list.innerHTML = recipes.map((r, i) => `
+        <div class="recipe-item">
+          <span class="tag">${r.meal}</span>
+          <h4 style="margin: 6px 0 4px 0; color:#2e7d32;">${r.name}</h4>
+          <div style="margin-bottom: 8px;">
+            ${r.calories ? `<span class="macro-badge">${r.calories} kcal</span>` : ''}
+            ${r.protein ? `<span class="macro-badge">P: ${r.protein}g</span>` : ''}
+            ${r.carbs ? `<span class="macro-badge">C: ${r.carbs}g</span>` : ''}
+            ${r.fats ? `<span class="macro-badge">F: ${r.fats}g</span>` : ''}
+          </div>
+          <p style="white-space: pre-line; font-size: 13px; color: #333; margin: 4px 0 10px 0;">${r.recipe}</p>
+          <button class="danger" onclick="deleteRecipe(${i})">Delete Item</button>
+        </div>
+      `).join('');
+    }
+
+    function addRecipe() {
+      const name = document.getElementById('foodName').value.trim();
+      const meal = document.getElementById('mealType').value;
+      const calories = document.getElementById('calories').value;
+      const protein = document.getElementById('protein').value;
+      const carbs = document.getElementById('carbs').value;
+      const fats = document.getElementById('fats').value;
+      const recipe = document.getElementById('recipeText').value.trim();
+
+      if (!name || !recipe) {
+        alert('Please fill out at least the Food Name and Detailed Recipe/Instructions!');
+        return;
+      }
+
+      const recipes = getRecipes();
+      recipes.push({ name, meal, calories, protein, carbs, fats, recipe });
+      localStorage.setItem('myDietRecipesFullV2', JSON.stringify(recipes));
+
+      document.getElementById('foodName').value = '';
+      document.getElementById('calories').value = '';
+      document.getElementById('protein').value = '';
+      document.getElementById('carbs').value = '';
+      document.getElementById('fats').value = '';
+      document.getElementById('recipeText').value = '';
+      
+      renderRecipes();
+      renderOptions();
+    }
+
+    function deleteRecipe(index) {
+      if (confirm('Delete this recipe item?')) {
+        const recipes = getRecipes();
+        recipes.splice(index, 1);
+        localStorage.setItem('myDietRecipesFullV2', JSON.stringify(recipes));
+        renderRecipes();
+        renderOptions();
+      }
+    }
+
+    function exportData() {
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(getRecipes(), null, 2));
+      const downloadAnchor = document.createElement('a');
+      downloadAnchor.setAttribute("href", dataStr);
+      downloadAnchor.setAttribute("download", "my_diet_mealprep_backup.json");
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      downloadAnchor.remove();
+    }
+
+    function importData(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const imported = JSON.parse(e.target.result);
+          if (Array.isArray(imported)) {
+            localStorage.setItem('myDietRecipesFullV2', JSON.stringify(imported));
+            renderRecipes();
+            renderOptions();
+            alert('Data imported successfully!');
+          }
+        } catch (err) {
+          alert('Invalid JSON file.');
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    renderRecipes();
+    renderOptions();
+  </script>
+</body>
+</html>
       },
       {
         name: "Simple Tamarind Pulusu (Bendakaya / Egg / Chamadumpala / Munagakaya)",
