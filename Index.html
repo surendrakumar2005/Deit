@@ -1,0 +1,249 @@
+Index.html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Diet & Recipe Manager</title>
+  <style>
+    :root { --primary: #2e7d32; --bg: #f4f6f8; --card: #ffffff; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); margin: 0; padding: 16px; }
+    .container { max-width: 600px; margin: 0 auto; }
+    h1, h3 { color: var(--primary); margin-top: 0; }
+    .card { background: var(--card); padding: 16px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); margin-bottom: 16px; }
+    .row { display: flex; gap: 8px; }
+    .row > * { flex: 1; }
+    input, textarea, select, button { width: 100%; margin-top: 8px; padding: 10px; border-radius: 8px; border: 1px solid #ccc; box-sizing: border-box; font-size: 14px; }
+    button { background: var(--primary); color: white; border: none; font-weight: bold; cursor: pointer; transition: 0.2s; }
+    button:active { opacity: 0.8; }
+    button.secondary { background: #455a64; margin-top: 6px; }
+    button.danger { background: #c62828; width: auto; padding: 6px 12px; font-size: 12px; }
+    .recipe-item { border-left: 4px solid var(--primary); padding-left: 12px; margin-bottom: 16px; background: #fafafa; padding: 10px; border-radius: 4px; }
+    .tag { display: inline-block; background: #e8f5e9; color: var(--primary); padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; }
+    .macro-badge { display: inline-block; background: #e3f2fd; color: #1565c0; padding: 2px 6px; border-radius: 4px; font-size: 11px; margin-right: 4px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1 style="text-align: center;">My Personal Diet & Recipes</h1>
+
+    <!-- Add Custom Food Form -->
+    <div class="card">
+      <h3>Add / Customize Food Item</h3>
+      <input type="text" id="foodName" placeholder="Food Name (e.g., Thotakura Pappu)">
+      
+      <div class="row">
+        <select id="mealType">
+          <option value="Breakfast">Breakfast</option>
+          <option value="Lunch & Dinner">Lunch & Dinner</option>
+          <option value="Post-Workout">Post-Workout</option>
+          <option value="Daily Booster">Daily Booster</option>
+        </select>
+        <input type="number" id="calories" placeholder="Calories (kcal)">
+      </div>
+
+      <div class="row">
+        <input type="number" id="protein" placeholder="Protein (g)">
+        <input type="number" id="carbs" placeholder="Carbs (g)">
+        <input type="number" id="fats" placeholder="Fats (g)">
+      </div>
+
+      <textarea id="recipeText" rows="4" placeholder="Recipe steps, portion guidelines (e.g., Pair with 600g cooked rice)..."></textarea>
+      <button onclick="addRecipe()">Save Food Item</button>
+    </div>
+
+    <!-- Data Management -->
+    <div class="card">
+      <button class="secondary" onclick="exportData()">Export Data (JSON Download)</button>
+      <input type="file" id="importFile" accept=".json" style="display:none;" onchange="importData(event)">
+      <button class="secondary" onclick="document.getElementById('importFile').click()">Import Master Data (JSON)</button>
+    </div>
+
+    <!-- Food List -->
+    <div class="card">
+      <h3>Saved Food Items & Recipes</h3>
+      <div id="recipeList"></div>
+    </div>
+  </div>
+
+  <script>
+    // Master Default Dataset configured for 600g Rice (350g Lunch / 250g Dinner)
+    const defaultData = [
+      {
+        name: "Daily Rice Portions (600g Total)",
+        meal: "Lunch & Dinner Base",
+        calories: 780, protein: 14, carbs: 168, fats: 1,
+        recipe: "Lunch: 350g cooked white rice (~455 kcal).\nDinner: 250g cooked white rice (~325 kcal).\nServes as the carb base for all daily curries, pulusu, and pappu."
+      },
+      {
+        name: "Breakfast Option 1: Oats & Seed Bowl + 2 Eggs",
+        meal: "Breakfast",
+        calories: 780, protein: 37, carbs: 75, fats: 28,
+        recipe: "50g oats cooked with 200ml milk or curd + 1 banana + 1 tbsp each of chia, flax, pumpkin, and sunflower seeds. Served with 2 whole eggs on the side."
+      },
+      {
+        name: "Breakfast Option 2: 4 Mini Dosa + Chutney + 2 Eggs + 2 Bananas",
+        meal: "Breakfast",
+        calories: 780, protein: 26, carbs: 105, fats: 22,
+        recipe: "4 homemade mini dosas served with fresh peanut chutney, 2 whole eggs, and 2 bananas."
+      },
+      {
+        name: "Night Air-Fried Chicken (For Veg / Pappu / Pulusu Days)",
+        meal: "Post-Workout",
+        calories: 420, protein: 62, carbs: 2, fats: 14,
+        recipe: "250g boneless chicken marinated in ginger-garlic, chili powder, turmeric, coriander, home garam masala, lemon, and 1 tsp oil. Air-fry at 190°C for 15 mins. Eaten post-workout with 250g dinner rice."
+      },
+      {
+        name: "Hyderabadi Chicken Biryani Day (500g Chicken Total)",
+        meal: "Lunch & Dinner",
+        calories: 1750, protein: 140, carbs: 140, fats: 45,
+        recipe: "500g chicken marinated in curd, mint, and spices layered with Basmati rice. Split between Lunch (250g) and Dinner (250g). NO extra air-fried chicken needed on this day!"
+      },
+      {
+        name: "Punjabi Butter Chicken Day (500g Chicken Total)",
+        meal: "Lunch & Dinner",
+        calories: 1650, protein: 135, carbs: 130, fats: 50,
+        recipe: "500g boneless chicken in a tomato, butter, and cream/milk sauce. Split between Lunch and Dinner. NO extra air-fried chicken needed on this day!"
+      },
+      {
+        name: "Leafy Greens Pappu (Gongura / Thotakura / Palakura)",
+        meal: "Lunch & Dinner",
+        calories: 320, protein: 18, carbs: 48, fats: 4,
+        recipe: "Toor dal pressure cooked with fresh greens, onions, tomatoes, and chilies. Mashed smooth (No Popu). Scaled to pair with 600g cooked white rice across Lunch (350g) and Dinner (250g)."
+      },
+      {
+        name: "Simple Tamarind Pulusu (Bendakaya / Egg / Chamadumpala / Munagakaya)",
+        meal: "Lunch & Dinner",
+        calories: 260, protein: 16, carbs: 32, fats: 7,
+        recipe: "Veggies or 3 boiled eggs simmered with onions, chilies, fresh tamarind juice, and spices (No Popu). Paired with 600g total cooked rice across the day."
+      },
+      {
+        name: "Simple Tomato Veg Curry (Cauliflower / Chikudikaya)",
+        meal: "Lunch & Dinner",
+        calories: 180, protein: 6, carbs: 24, fats: 6,
+        recipe: "Onions, tomatoes, and veggies cooked down with red chili powder, turmeric, and salt (No Popu). Paired with 600g total cooked white rice across the day."
+      },
+      {
+        name: "Simple Veggie Fries (Potato / Dondakaya / Carrot)",
+        meal: "Lunch & Dinner",
+        calories: 220, protein: 4, carbs: 30, fats: 9,
+        recipe: "Veggies roasted in oil with salt, turmeric, and chili powder. Served alongside 600g cooked white rice."
+      },
+      {
+        name: "Andhra Majjiga Charu",
+        meal: "Lunch & Dinner",
+        calories: 230, protein: 11, carbs: 16, fats: 12,
+        recipe: "Whisked curd diluted with water, turmeric, salt, chilies, and ginger. Cooling probiotic curry paired with 600g cooked white rice across the day."
+      },
+      {
+        name: "Daily Vitamin C & Health Boosters",
+        meal: "Daily Booster",
+        calories: 30, protein: 1, carbs: 7, fats: 0,
+        recipe: "1 raw Amla eaten daily with lunch (boosts iron absorption from greens/pappu) + 3.5L water + 15 mins morning sunlight."
+      }
+    ];
+
+    function getRecipes() {
+      const stored = localStorage.getItem('myDietRecipesCustom');
+      if (!stored) {
+        localStorage.setItem('myDietRecipesCustom', JSON.stringify(defaultData));
+        return defaultData;
+      }
+      return JSON.parse(stored);
+    }
+
+    function renderRecipes() {
+      const recipes = getRecipes();
+      const list = document.getElementById('recipeList');
+      if (recipes.length === 0) {
+        list.innerHTML = '<p style="color:#777;">No items present.</p>';
+        return;
+      }
+      list.innerHTML = recipes.map((r, i) => `
+        <div class="recipe-item">
+          <span class="tag">${r.meal}</span>
+          <h4 style="margin: 6px 0 4px 0; color:#2e7d32;">${r.name}</h4>
+          <div style="margin-bottom: 8px;">
+            ${r.calories ? `<span class="macro-badge">${r.calories} kcal</span>` : ''}
+            ${r.protein ? `<span class="macro-badge">P: ${r.protein}g</span>` : ''}
+            ${r.carbs ? `<span class="macro-badge">C: ${r.carbs}g</span>` : ''}
+            ${r.fats ? `<span class="macro-badge">F: ${r.fats}g</span>` : ''}
+          </div>
+          <p style="white-space: pre-line; font-size: 13px; color: #333; margin: 4px 0 10px 0;">${r.recipe}</p>
+          <button class="danger" onclick="deleteRecipe(${i})">Delete Item</button>
+        </div>
+      `).join('');
+    }
+
+    function addRecipe() {
+      const name = document.getElementById('foodName').value.trim();
+      const meal = document.getElementById('mealType').value;
+      const calories = document.getElementById('calories').value;
+      const protein = document.getElementById('protein').value;
+      const carbs = document.getElementById('carbs').value;
+      const fats = document.getElementById('fats').value;
+      const recipe = document.getElementById('recipeText').value.trim();
+
+      if (!name || !recipe) {
+        alert('Please fill out at least the Food Name and Recipe/Notes!');
+        return;
+      }
+
+      const recipes = getRecipes();
+      recipes.push({ name, meal, calories, protein, carbs, fats, recipe });
+      localStorage.setItem('myDietRecipesCustom', JSON.stringify(recipes));
+
+      // Clear input fields
+      document.getElementById('foodName').value = '';
+      document.getElementById('calories').value = '';
+      document.getElementById('protein').value = '';
+      document.getElementById('carbs').value = '';
+      document.getElementById('fats').value = '';
+      document.getElementById('recipeText').value = '';
+      
+      renderRecipes();
+    }
+
+    function deleteRecipe(index) {
+      if (confirm('Delete this food item?')) {
+        const recipes = getRecipes();
+        recipes.splice(index, 1);
+        localStorage.setItem('myDietRecipesCustom', JSON.stringify(recipes));
+        renderRecipes();
+      }
+    }
+
+    function exportData() {
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(getRecipes(), null, 2));
+      const downloadAnchor = document.createElement('a');
+      downloadAnchor.setAttribute("href", dataStr);
+      downloadAnchor.setAttribute("download", "my_custom_diet_backup.json");
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      downloadAnchor.remove();
+    }
+
+    function importData(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const imported = JSON.parse(e.target.result);
+          if (Array.isArray(imported)) {
+            localStorage.setItem('myDietRecipesCustom', JSON.stringify(imported));
+            renderRecipes();
+            alert('Recipes imported successfully!');
+          }
+        } catch (err) {
+          alert('Invalid JSON file format.');
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    renderRecipes();
+  </script>
+</body>
+</html>
+
